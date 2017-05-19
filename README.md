@@ -1,11 +1,12 @@
 # Breast-Cancer-ML-R
 Introduction to Machine Learning Techniques in R Using Breast Cancer Data
 
-Abstract: This document will provide an overview of some popular machine learning
-  techniques, as well as a typical project flow for a machine learning project.
+Abstract: This document will provide an overview of some popular machine learning techniques, as well as a typical project flow for a machine learning project.  
+
 Author: Nicholas Pylypiw--Cardinal Solutions
 
 Data Source: https://www.kaggle.com/uciml/breast-cancer-wisconsin-data
+
 Title: Machine Learning and Breast Cancer Prediction
 
 This case study will require the following packages.
