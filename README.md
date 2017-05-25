@@ -13,20 +13,22 @@ This case study will require the following packages.
 
 ```{r Load Packages}
 
-#install.packages("readr")
-#install.packages("rpart")
-#install.packages("rpart.plot")
-#install.packages("party")
-#install.packages("ggplot2")
-#install.packages("corrplot")
-#install.packages("plyr")
-#install.packages("plotly")
-#install.packages("class")
-#install.packages("randomForest")
-#install.packages("e1071, dependencies=TRUE)
-#install.packages("caret")
-#install.packages("dplyr")
-#install.packages("scales")
+# install.packages("readr")
+# install.packages("rpart")
+# install.packages("rpart.plot")
+# install.packages("party")
+# install.packages("ggplot2")
+# install.packages("corrplot")
+# install.packages("plyr")
+# install.packages("plotly")
+# install.packages("class")
+# install.packages("randomForest")
+# install.packages("e1071", dependencies=TRUE)
+# install.packages("caret")
+# install.packages("dplyr")
+# install.packages("scales")
+# install.packages("pROC")
+# install.packages("partykit")
 
 library(readr)
 library(rpart)
@@ -42,6 +44,8 @@ library(e1071)
 library(caret)
 library(dplyr)
 library(scales)
+library(pROC)
+library(partykit)
 
 ```
 
@@ -80,7 +84,10 @@ summary(breast_cancer_raw)
 table(breast_cancer_raw$diagnosis)
 
 # Looking at distribution for area_mean variable
-hist(breast_cancer_raw$area_mean, main = 'Distribution of area_mean')
+hist(breast_cancer_raw$area_mean, 
+     main = 'Distribution of Cell Area Means',
+     xlab = 'Mean Area',
+     col = 'green')
 
 ```
 
@@ -133,15 +140,12 @@ Most techniques in R require character levels to be coded as factors.
 
 ```{r Convert Variables}
 
-# Conver variables to factor
+# Convert variables to factor
 breast_cancer$diagnosis <- as.factor(breast_cancer$diagnosis)
 breast_cancer$race <- as.factor(breast_cancer$race)
 
 # Some methods will require a numeric binary input
 breast_cancer$diagnosis_1M_0B <- ifelse(breast_cancer$diagnosis=="M",1,0)
-
-# Pull numeric variables into list for normalization
-variables <- breast_cancer[!(names(breast_cancer) %in% c("id", "diagnosis", "race"))]
 
 # Create function for normalization
 normalize <- function(x) {
@@ -152,6 +156,9 @@ breast_cancer_n <- as.data.frame(lapply(breast_cancer[3:32], normalize))
 
 # Name new variables with a suffix '_n'
 colnames(breast_cancer_n) <- paste0(colnames(breast_cancer_n), "_n")
+
+# Pull numeric variables into list for correlation calculations
+variables <- breast_cancer[!(names(breast_cancer) %in% c("id", "diagnosis", "race"))]
 
 # Combine new variables with old
 breast_cancer <- cbind(breast_cancer, breast_cancer_n)
@@ -171,24 +178,26 @@ prop.table(table(breast_cancer$race, breast_cancer$diagnosis), 1)
 # Display column percentages
 prop.table(table(breast_cancer$race, breast_cancer$diagnosis), 2)
 
-# Display row percentages
+# Display % Malignant by Age
 age_diagnosis <- as.data.frame(prop.table(table(breast_cancer$age, breast_cancer$diagnosis), 1))
 age_diagnosis <- age_diagnosis[age_diagnosis$Var2 == 'M',]
 
-f <- list(
-  family = "Courier New, monospace",
-  size = 18,
-  color = "#7f7f7f"
-)
-
-plot_ly(age_diagnosis, x = ~Var1, y = ~Freq, type = 'scatter', mode = 'lines') %>%
-  layout(title = "Breast Cancer by Age",
-         xaxis = list(
-              title = "Age",
-              titlefont = f), 
-         yaxis = list(
-              title = "% of Patients Malignant",
-              titlefont = f))
+windowsFonts(Times=windowsFont("Times New Roman"))
+ggplot2::ggplot() +
+  geom_line(aes(y = Freq, x = Var1, group = 1), size=1, data = age_diagnosis) +
+  theme(legend.position="bottom", legend.direction="horizontal",
+        legend.title = element_blank()) +
+  labs(x="Age in Years", y="Percentage of Malignance") +
+  ggtitle("Percentage of Malignant Patients by Age") +
+  scale_color_manual(values=fill) +
+  theme(axis.line = element_line(size=1, colour = "black"), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), panel.border = element_blank(),
+        panel.background = element_blank()) +
+  theme(plot.title=element_text(family="Times"), text=element_text(family="Times"),
+        axis.text.x=element_text(colour="black", size = 9),
+        axis.text.y=element_text(colour="black", size = 9),
+        legend.key=element_rect(fill="white", colour="white"),
+        plot.margin = unit(c(1, 1, 1, 1), "in"))
 
 # Display differences in perimeter_worst between groups
 library(ggplot2)
@@ -241,27 +250,23 @@ model1 <- diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
   concave_points_worst + symmetry_worst + fractal_dimension_worst
 
 # Train the model
-dtree1 <- ctree(model1, data = breast_cancer_train)
+dtree1 <- partykit::ctree(model1, data = breast_cancer_train)
 
-#Output confusion matrix on training data
+# Output confusion matrix on training data
 table(predict(dtree1), breast_cancer_train$diagnosis)
 
 # Display Decision Tree Specs
 print(dtree1)
 
 # Graph the tree, two different views
-plot(dtree1)
-plot(dtree1, type = "simple")
+plot(dtree1, gp = gpar(fontsize = 8))
+plot(dtree1, type = "simple", gp = gpar(fontsize = 8))
 
 # Test model
 test_dtree1 <- predict(dtree1, newdata=breast_cancer_test)
 
 # Output test results as confusion matrix
 table(test_dtree1, breast_cancer_test$diagnosis)
-
-# Append results to master data set
-breast_cancer_train <- cbind(breast_cancer_train, dtree1 = predict(dtree1))
-breast_cancer_test <- cbind(breast_cancer_test, dtree1 = test_dtree1)
 
 # Basic Decision Tree with all cell measurements, race and age added
 model2 <- diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + smoothness_mean + 
@@ -273,17 +278,17 @@ model2 <- diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + 
   concave_points_worst + symmetry_worst + fractal_dimension_worst + race + age
 
 # Train the model
-dtree2 <- ctree(model2, data = breast_cancer_train)
+dtree2 <- partykit::ctree(model2, data = breast_cancer_train)
 
-#Output confusion matrix on training data
+# Output confusion matrix on training data
 table(predict(dtree2), breast_cancer_train$diagnosis)
 
 # Display Decision Tree Specs
 print(dtree2)
 
 # Graph the tree, two different views
-plot(dtree2)
-plot(dtree2, type = "simple")
+plot(dtree2, gp = gpar(fontsize = 8))
+plot(dtree2, type = "simple", gp = gpar(fontsize = 8))
 
 # Test model
 test_dtree2<-predict(dtree2, newdata=breast_cancer_test)
@@ -293,6 +298,10 @@ table(test_dtree2, breast_cancer_test$diagnosis)
 
 # Check if two model predictions sets are same
 all.equal(test_dtree1, test_dtree2)
+
+# Append results to master data set
+breast_cancer_train <- cbind(breast_cancer_train, dtree1 = predict(dtree1))
+breast_cancer_test <- cbind(breast_cancer_test, dtree1 = test_dtree1)
 
 # Remove unnecessary objects
 rm(dtree1, dtree2, test_dtree1, test_dtree2)
@@ -304,31 +313,54 @@ determine variable importance.  Meanwhile, the rpart procedure may be more biase
 
 ```{r II: Recursive Partitioning}
 
-# Train the model using the model above, including race and age
-rp <- rpart(formula = model2, method = 'class', data = breast_cancer_train)
+# Train the model using the model above, not including race and age
+rp1 <- rpart(formula = model1, method = 'class', data = breast_cancer_train)
 
 # Plots the rp map
-rpart.plot(rp)
+rpart.plot(rp1)
 
 # Displays Model Specs
-printcp(rp)
+printcp(rp1)
 
 # Output predictions for training set
-pred = predict(rp, type = 'class')
+pred1 = predict(rp1, type = 'class')
 
 # Output predictions for test set
-pred_new = predict(rp, newdata=breast_cancer_test, type = 'class')
+pred_new1 = predict(rp1, newdata=breast_cancer_test, type = 'class')
 
 # Confusion Matrices for Train/Test
-table(pred, breast_cancer_train$diagnosis)
-table(pred_new, breast_cancer_test$diagnosis)
+table(pred1, breast_cancer_train$diagnosis)
+table(pred_new1, breast_cancer_test$diagnosis)
+
+# Train the model using the model above, including race and age
+rp2 <- rpart(formula = model2, method = 'class', data = breast_cancer_train)
+
+# Plots the rp map
+rpart.plot(rp2)
+
+# Displays Model Specs
+printcp(rp2)
+
+# Output predictions for training set
+pred2 = predict(rp2, type = 'class')
+
+# Output predictions for test set
+pred_new2 = predict(rp2, newdata=breast_cancer_test, type = 'class')
+
+# Confusion Matrices for Train/Test
+table(pred2, breast_cancer_train$diagnosis)
+table(pred_new2, breast_cancer_test$diagnosis)
+
+# Check if two model predictions sets are same
+all.equal(pred_new1, pred_new2)
 
 # Append results to master data set
-breast_cancer_train <- cbind(breast_cancer_train, rp = pred)
-breast_cancer_test <- cbind(breast_cancer_test, rp = pred_new)
+breast_cancer_train <- cbind(breast_cancer_train, rp1 = pred1)
+breast_cancer_test <- cbind(breast_cancer_test, rp1 = pred_new1)
 
 # Remove unnecessary objects
-rm(pred, pred_new, rp)
+rm(pred1, pred2, pred_new1, pred_new2, rp1, rp2)
+
 ```
 
 One of the major critiques of Recursive Partitioning and Decision Trees is the inherent bias of the training set itself,
@@ -379,8 +411,8 @@ rm(rf1, rf2, rf1_pred, rf2_pred)
 
 ```
 
-Logistic Regression predicts the probability of an individual falling into a certain class, as determined by its values of the
-independent variables. 
+Logistic Regression predicts the probability of an individual falling into a certain class, as determined by 
+its values of the independent variables. 
 
 Generally best to rebuild this model, to avoid quasi-complete separation.
 
@@ -401,35 +433,43 @@ model_logreg1 <- glm(breast_cancer_train$diagnosis_1M_0B ~
                     breast_cancer_train$age
                     ,family = binomial(link = 'logit'), data=breast_cancer_train, control = list(maxit = 50))
 
+
+
 # Output Model Specs
 summary(model_logreg1)
 
 # Analysis of Variance
-anova(model_logreg1, test="Chisq")
+anova(model_logreg1, test = "Chisq")
 
 # Collect raw probabilities from training set
-fitted.results_tr_raw <- predict(model_logreg1, type='response')
+fitted.results_tr_raw <- predict(model_logreg1, type = 'response')
 
 # Round probablities to 1 or 0
-fitted.results_tr <- ifelse(fitted.results_tr_raw > 0.5,1,0)
+fitted.results_tr <- ifelse(fitted.results_tr_raw > 0.5, 1, 0)
 
 # Calculate and print misclassification
 misClasificError <- mean(fitted.results_tr != breast_cancer_train$diagnosis_1M_0B)
-print(paste('Accuracy',1-misClasificError))
+print(paste('Accuracy', 1 - misClasificError))
 
 # Collect raw probabilities from test set
-fitted.results_tst_raw <- predict(model_logreg1, newdata=list(breast_cancer_train=breast_cancer_test), type='response')
+fitted.results_tst_raw <- predict(model_logreg1, 
+                                  newdata = list(breast_cancer_train = breast_cancer_test), 
+                                  type = 'response')
 
 # Round probablities to 1 or 0
-fitted.results_tst <- ifelse(fitted.results_tst_raw > 0.5,1,0)
+fitted.results_tst <- ifelse(fitted.results_tst_raw > 0.5, 1, 0)
 
 # Calculate and print misclassification
 misClasificError <- mean(fitted.results_tst != breast_cancer_test$diagnosis_1M_0B)
-print(paste('Accuracy',1-misClasificError))
+print(paste('Accuracy',1 - misClasificError))
 
 # Append results to master data set
 breast_cancer_train <- cbind(breast_cancer_train, glm_raw = fitted.results_tr_raw, glm = fitted.results_tr)
 breast_cancer_test <- cbind(breast_cancer_test, glm_raw = fitted.results_tst_raw, glm = fitted.results_tst)
+
+# ROC Curve
+plot(roc(diagnosis_1M_0B ~ glm_raw, data = breast_cancer_train))  
+plot(roc(diagnosis_1M_0B ~ glm_raw, data = breast_cancer_test))  
 
 # Recode numeric results to M / B
 breast_cancer_train$glm <- ifelse(breast_cancer_train$glm == 1, 'M', 'B')
@@ -437,6 +477,7 @@ breast_cancer_test$glm <- ifelse(breast_cancer_test$glm == 1, 'M', 'B')
 
 # Remove unnecessary objects
 rm(fitted.results_tr, fitted.results_tr_raw, fitted.results_tst, fitted.results_tst_raw, misClasificError, model_logreg1)
+
 ```
 
 Partitions data into k many clusters.  An observation's classification in a given cluster is determined by the distance from that point to the cluster's center.
@@ -478,11 +519,11 @@ rm(bc_knn_test, bc_knn_train, knn.7, model_knn)
 
 ```{r Results}
 
-# Join training and test reults back together
+# Join training and test results back together
 breast_cancer <- rbind(breast_cancer_train, breast_cancer_test)
 
 # Create subset of results
-breast_cancer_results <- breast_cancer_test[c('id', 'diagnosis', 'race', 'age', 'dtree1', 'rp', 
+breast_cancer_results <- breast_cancer_test[c('id', 'diagnosis', 'race', 'age', 'dtree1', 'rp1', 
                                               'glm_raw', 'glm', 'knn.7', 'rf1_pred')]
 
 # Create _num column: 1 if diagnosis accurate, else 0
@@ -504,7 +545,7 @@ breast_cancer_results$rf1_pred_acc <- percent(sum(breast_cancer_results$rf1_pred
 
 # Create _num column: 1 if cancer predicted, else 0
 breast_cancer_results$dtree1_num <- ifelse(breast_cancer_results$dtree1 == 'M', 1, 0)
-breast_cancer_results$rp_num <- ifelse(breast_cancer_results$rp == 'M', 1, 0)
+breast_cancer_results$rp_num <- ifelse(breast_cancer_results$rp1 == 'M', 1, 0)
 breast_cancer_results$glm_num <- ifelse(breast_cancer_results$glm == 'M', 1, 0)
 breast_cancer_results$knn.7_num <- ifelse(breast_cancer_results$knn.7 == 'M', 1, 0)
 breast_cancer_results$rf1_pred_num <- ifelse(breast_cancer_results$rf1_pred == 'M', 1, 0)
@@ -512,7 +553,7 @@ breast_cancer_results$rf1_pred_num <- ifelse(breast_cancer_results$rf1_pred == '
 # Add up _num to get a consensus number.  Use probability for glm.
 breast_cancer_results$decision_sum <- (breast_cancer_results$dtree1_num +
                                        # breast_cancer_results$rp_num +
-                                       breast_cancer_results$glm_raw * breast_cancer_results$glm_num +
+                                       breast_cancer_results$glm_raw +
                                        breast_cancer_results$knn.7_num +
                                        breast_cancer_results$rf1_pred_num)
 
@@ -556,7 +597,7 @@ breast_cancer_results_M$rf1_pred_acc <- percent(sum(breast_cancer_results_M$rf1_
 
 #Create _num column: 1 if cancer predicted, else 0
 breast_cancer_results_M$dtree1_num <- ifelse(breast_cancer_results_M$dtree1 == 'M', 1, 0)
-breast_cancer_results_M$rp_num <- ifelse(breast_cancer_results_M$rp == 'M', 1, 0)
+breast_cancer_results_M$rp_num <- ifelse(breast_cancer_results_M$rp1 == 'M', 1, 0)
 breast_cancer_results_M$glm_num <- ifelse(breast_cancer_results_M$glm == 'M', 1, 0)
 breast_cancer_results_M$knn.7_num <- ifelse(breast_cancer_results_M$knn.7 == 'M', 1, 0)
 breast_cancer_results_M$rf1_pred_num <- ifelse(breast_cancer_results_M$rf1_pred == 'M', 1, 0)
@@ -564,7 +605,7 @@ breast_cancer_results_M$rf1_pred_num <- ifelse(breast_cancer_results_M$rf1_pred 
 # Add up _num to get a consensus number.  Use probability for glm.
 breast_cancer_results_M$decision_sum <- (breast_cancer_results_M$dtree1_num +
                                        # breast_cancer_results_M$rp_num +
-                                       breast_cancer_results_M$glm_raw * breast_cancer_results_M$glm_num +
+                                       breast_cancer_results_M$glm_raw +
                                        breast_cancer_results_M$knn.7_num +
                                        breast_cancer_results_M$rf1_pred_num)
 
