@@ -145,7 +145,7 @@ breast_cancer$diagnosis <- as.factor(breast_cancer$diagnosis)
 breast_cancer$race <- as.factor(breast_cancer$race)
 
 # Some methods will require a numeric binary input
-breast_cancer$diagnosis_1M_0B <- ifelse(breast_cancer$diagnosis=="M",1,0)
+breast_cancer$diagnosis_1M_0B <- ifelse(breast_cancer$diagnosis == "M", 1, 0)
 
 # Create function for normalization
 normalize <- function(x) {
@@ -515,6 +515,7 @@ breast_cancer_test <- cbind(breast_cancer_test, knn.7)
 rm(bc_knn_test, bc_knn_train, knn.7, model_knn)
 
 ```
+Let's join train and test back together and do some post-modeling data manipulation.
 
 
 ```{r Results}
@@ -584,7 +585,7 @@ breast_cancer_results$pred_num <- NULL
 rm(model1, model2, breast_cancer_test, breast_cancer_train)
 
 ```
-
+Doing the same as above, but only on patients WITH cancer.
 
 ```{r Results Continued}
 
@@ -638,5 +639,7 @@ breast_cancer_results_wrong <- breast_cancer_results_M[which(breast_cancer_resul
 # Compare model performance
 head(breast_cancer_results[c('dtree1_acc', 'rp_acc', 'glm_acc', 'knn.7_acc', 'rf1_pred_acc', 'ensemble_acc')], 1)
 head(breast_cancer_results_M[c('dtree1_acc', 'rp_acc', 'glm_acc', 'knn.7_acc', 'rf1_pred_acc', 'ensemble_acc')], 1)
+
+table(breast_cancer_results$diagnosis.pred ,breast_cancer_results$diagnosis)
 
 ```
