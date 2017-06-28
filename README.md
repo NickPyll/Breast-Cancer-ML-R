@@ -9,6 +9,8 @@ Data Source: https://www.kaggle.com/uciml/breast-cancer-wisconsin-data
 
 Title: Machine Learning and Breast Cancer Prediction
 
+---
+
 This case study will require the following packages.
 
 ```{r Load Packages}
@@ -66,7 +68,7 @@ head(breast.cancer.raw)
 ```
 
 Notice in the output from head() that a few variables have spaces in their names.  This naming convention is not 
-compatible with many of the R procdures used in this tutorial, so those will have to be changed.
+compatible with many of the R procedures used in this tutorial, so those will have to be changed.
 
 ```{r Rename Columns}
 
@@ -132,15 +134,15 @@ breast.cancer.raw.B$race <- sample( c('White', 'Black', 'Asian', 'Hispanic', 'Ot
 breast.cancer.raw.M$age <- sample( 18:40, 
                                    size = nrow(breast.cancer.raw.M), 
                                    replace = TRUE, 
-                                   prob = c(0.005, 0.005, 0.006, 0.006, 0.009, 0.012, 0.016, 0.022, 
-                                            0.025, 0.08, 0.17, 0.19, 0.14, 0.044, 0.038, 0.029, 0.027,
-                                            0.024, 0.021, 0.028, 0.042, 0.03, 0.031) )
+                        prob = c(0.005, 0.005, 0.006, 0.006, 0.009, 0.012, 0.016, 0.022, 
+                                0.025, 0.08, 0.17, 0.19, 0.14, 0.044, 0.038, 0.029, 0.027,
+                                0.024, 0.021, 0.028, 0.042, 0.03, 0.031) )
 breast.cancer.raw.B$age <- sample( 18:40, 
                                    size = nrow(breast.cancer.raw.B), 
                                    replace = TRUE, 
-                                   prob = c(0.01, 0.01, 0.01, 0.012, 0.015, 0.018, 0.022, 0.032,
-                                            0.04, 0.1, 0.2, 0.201, 0.12, 0.04, 0.033, 0.027, 0.022,
-                                            0.018, 0.016, 0.014, 0.02, 0.01, 0.01) )
+                        prob = c(0.01, 0.01, 0.01, 0.012, 0.015, 0.018, 0.022, 0.032,
+                                0.04, 0.1, 0.2, 0.201, 0.12, 0.04, 0.033, 0.027, 0.022,
+                                0.018, 0.016, 0.014, 0.02, 0.01, 0.01) )
 
 # Combine tables back together
 breast.cancer <- rbind(breast.cancer.raw.M, breast.cancer.raw.B)
@@ -212,25 +214,31 @@ prop.table(table(breast.cancer$race, breast.cancer$diagnosis), 1)
 prop.table(table(breast.cancer$race, breast.cancer$diagnosis), 2)
 
 # Display % Malignant by Age
-age.diagnosis <- as.data.frame(prop.table(table(breast.cancer$age, breast.cancer$diagnosis), 1))
+age.diagnosis <- as.data.frame(prop.table(table(breast.cancer$age, 
+                                                breast.cancer$diagnosis), 1))
 age.diagnosis <- age.diagnosis[age.diagnosis$Var2 == 'M',]
 
 windowsFonts(Times=windowsFont("Times New Roman"))
-ggplot2::ggplot() +
-  geom_line(aes(y = Freq, x = Var1, group = 1), size=1, data = age.diagnosis) +
-  theme(legend.position="bottom", legend.direction="horizontal",
+ggplot2::ggplot(age.diagnosis, aes(y = Freq, x = Var1, group = 1)) +
+  geom_point(aes(y = Freq, x = Var1, group = 1), shape = 1, data = age.diagnosis) +
+  geom_smooth(method = lm) +
+  theme(legend.position = "bottom", legend.direction = "horizontal",
         legend.title = element_blank()) +
-  labs(x="Age in Years", y="Percentage of Malignance") +
+  labs(x = "Age in Years", y = "Percentage of Malignance") +
   ggtitle("Percentage of Malignant Patients by Age") +
-  scale_color_manual(values=fill) +
-  theme(axis.line = element_line(size=1, colour = "black"), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), panel.border = element_blank(),
+  scale_color_manual(values = fill)
+  theme(axis.line = element_line(size=1, 
+                                 colour = "black"), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(),
         panel.background = element_blank()) +
-  theme(plot.title=element_text(family="Times"), text=element_text(family="Times"),
-        axis.text.x=element_text(colour="black", size = 9),
-        axis.text.y=element_text(colour="black", size = 9),
-        legend.key=element_rect(fill="white", colour="white"),
-        plot.margin = unit(c(1, 1, 1, 1), "in"))
+  theme(plot.title = element_text(family = "Times"), 
+        text = element_text(family = "Times"),
+        axis.text.x = element_text(colour = "black", size = 9),
+        axis.text.y = element_text(colour = "black", size = 9),
+        legend.key = element_rect(fill = "white", colour = "white"),
+        plot.margin = unit(c(1, 1, 1, 1), "in")) 
 
 # Display differences in perimeter.worst between groups
 library(ggplot2)
@@ -579,7 +587,8 @@ log.reg.acc <- percent(sum(results.test$log.reg.num)/nrow(results.test))
 knn.7.acc <- percent(sum(results.test$knn.7.num)/nrow(results.test))
 group <- 'Overall'
 
-accuracy.comparison <- data.frame(group,rec.part1.acc,dec.tree1.acc,rand.for1.acc,log.reg.acc,knn.7.acc)
+accuracy.comparison <- data.frame(group, rec.part1.acc, dec.tree1.acc, 
+                                  rand.for1.acc, log.reg.acc, knn.7.acc)
 
 # Create .num column: 1 if cancer predicted, else 0
 results.test$rec.part1.num <- ifelse(results.test$rec.part1 == 'M', 1, 0)
@@ -636,7 +645,8 @@ rand.for1.acc <- percent(sum(results.test.M$rand.for1.num)/nrow(results.test.M))
 log.reg.acc <- percent(sum(results.test.M$log.reg.num)/nrow(results.test.M))
 knn.7.acc <- percent(sum(results.test.M$knn.7.num)/nrow(results.test.M))
 group <- 'M'
-accuracy.comparison.M <- data.frame(group,rec.part1.acc,dec.tree1.acc,rand.for1.acc,log.reg.acc,knn.7.acc)
+accuracy.comparison.M <-data.frame(group, rec.part1.acc, dec.tree1.acc, 
+                                   rand.for1.acc, log.reg.acc, knn.7.acc)
 
 # Create accuracy % for B
 rec.part1.acc <- percent(sum(results.test.B$rec.part1.num)/nrow(results.test.B))
@@ -645,7 +655,8 @@ rand.for1.acc <- percent(sum(results.test.B$rand.for1.num)/nrow(results.test.B))
 log.reg.acc <- percent(sum(results.test.B$log.reg.num)/nrow(results.test.B))
 knn.7.acc <- percent(sum(results.test.B$knn.7.num)/nrow(results.test.B))
 group <- 'B'
-accuracy.comparison.B <- data.frame(group,rec.part1.acc,dec.tree1.acc,rand.for1.acc,log.reg.acc,knn.7.acc)
+accuracy.comparison.B <- data.frame(group, rec.part1.acc, dec.tree1.acc, 
+                                    rand.for1.acc, log.reg.acc, knn.7.acc)
 
 #Create .num column: 1 if cancer predicted, else 0
 results.test.M$rec.part1.num <- ifelse(results.test.M$rec.part1 == 'M', 1, 0)
@@ -700,36 +711,49 @@ results.test.B <- results.test.B %>%
   mutate(diagnosis.pred = ifelse(decision.sum < .4, "B", "M"))
 
 # Calculate ensemble model accuracy
-results.test.M$pred.num <- ifelse(results.test.M$diagnosis.pred == results.test.M$diagnosis, 1, 0)
+results.test.M$pred.num <- 
+  ifelse(results.test.M$diagnosis.pred == results.test.M$diagnosis, 1, 0)
 results.test.M$correct <- ifelse(results.test.M$diagnosis.pred == results.test.M$diagnosis, 
                                         'CORRECT', 'INCORRECT')
-accuracy.comparison.M$ensemble.acc <- percent(sum(results.test.M$pred.num)/nrow(results.test.M))
+accuracy.comparison.M$ensemble.acc <-
+  percent(sum(results.test.M$pred.num)/nrow(results.test.M))
 
-results.test.B$pred.num <- ifelse(results.test.B$diagnosis.pred == results.test.B$diagnosis, 1, 0)
+results.test.B$pred.num <- 
+  ifelse(results.test.B$diagnosis.pred == results.test.B$diagnosis, 1, 0)
 results.test.B$correct <- ifelse(results.test.B$diagnosis.pred == results.test.B$diagnosis, 
                                         'CORRECT', 'INCORRECT')
-accuracy.comparison.B$ensemble.acc <- percent(sum(results.test.B$pred.num)/nrow(results.test.B))
+accuracy.comparison.B$ensemble.acc <-
+  percent(sum(results.test.B$pred.num)/nrow(results.test.B))
 
 # Combine results
-accuracy.comparison <- rbind(accuracy.comparison, accuracy.comparison.B, accuracy.comparison.M)
+accuracy.comparison <- 
+  rbind(accuracy.comparison, accuracy.comparison.B, accuracy.comparison.M)
 
 # Remove unnecessary column
 results.test.M$pred.num <- NULL
 results.test.B$pred.num <- NULL
 
 # Subset test patients predicted incorrectly by any model
-results.test.wrong <- results.test.M[which(results.test.M$decision.sum < 3.4),]
+results.test.wrong <- results.test[which(results.test$correct == 'INCORRECT'),]
+# results.test.wrong <- results.test.M[which(results.test.M$decision.sum < 3.4),]
 
 # Format variable to numeric
-accuracy.comparison$rec.part1.acc <- as.numeric(sub("%", "", as.character(accuracy.comparison$rec.part1.acc)))
-accuracy.comparison$dec.tree1.acc <- as.numeric(sub("%", "", as.character(accuracy.comparison$dec.tree1.acc)))
-accuracy.comparison$rand.for1.acc <- as.numeric(sub("%", "", as.character(accuracy.comparison$rand.for1.acc)))
-accuracy.comparison$log.reg.acc <- as.numeric(sub("%", "", as.character(accuracy.comparison$log.reg.acc)))
-accuracy.comparison$knn.7.acc <- as.numeric(sub("%", "", as.character(accuracy.comparison$knn.7.acc)))
-accuracy.comparison$ensemble.acc <- as.numeric(sub("%", "", as.character(accuracy.comparison$ensemble.acc)))
+accuracy.comparison$rec.part1.acc <- 
+  as.numeric(sub("%", "", as.character(accuracy.comparison$rec.part1.acc)))
+accuracy.comparison$dec.tree1.acc <- 
+  as.numeric(sub("%", "", as.character(accuracy.comparison$dec.tree1.acc)))
+accuracy.comparison$rand.for1.acc <- 
+  as.numeric(sub("%", "", as.character(accuracy.comparison$rand.for1.acc)))
+accuracy.comparison$log.reg.acc <- 
+  as.numeric(sub("%", "", as.character(accuracy.comparison$log.reg.acc)))
+accuracy.comparison$knn.7.acc <- 
+  as.numeric(sub("%", "", as.character(accuracy.comparison$knn.7.acc)))
+accuracy.comparison$ensemble.acc <- 
+  as.numeric(sub("%", "", as.character(accuracy.comparison$ensemble.acc)))
 
 # Transpose data for graph
-accuracy.comparison.long <- gather(accuracy.comparison, model, accuracy, rec.part1.acc:ensemble.acc, factor_key=TRUE)
+accuracy.comparison.long <- 
+  gather(accuracy.comparison, model, accuracy, rec.part1.acc:ensemble.acc, factor_key=TRUE)
 
 # Clustered bar plot of accuracy
 ggplot(accuracy.comparison.long, aes(group, accuracy, fill = model)) + 
