@@ -528,7 +528,7 @@ rm(fitted.results.tr, fitted.results.tr.raw, fitted.results.tst, fitted.results.
 
 ```
 
-Partitions data into k many clusters.  An observation's classification in a given cluster is determined by the distance from that point to the cluster's center.
+K-Nearest Neighbor.  An observation's classification is determined by the classification of the other observations around it.
 
 ```{r V: K-Nearest Neighbor}
 
